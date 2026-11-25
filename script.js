@@ -93,14 +93,16 @@ function toggleChat(open) {
 chatTrigger?.addEventListener('click', () => toggleChat(chatPanel.hidden));
 chatClose?.addEventListener('click', () => toggleChat(false));
 
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && chatPanel && !chatPanel.hidden) toggleChat(false);
+});
+
 const sections = document.querySelectorAll('main section[id]');
 const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
 if ('IntersectionObserver' in window) {
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) navAnchors.forEach(a => a.classList.toggle('active', a.getAttribute('href') === `#${entry.target.id}`));
-    });
-  }, { rootMargin: '-35% 0px -55% 0px' });
+  const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (entry.isIntersecting) navAnchors.forEach(a => a.classList.toggle('active', a.getAttribute('href') === `#${entry.target.id}`));
+  }), { rootMargin: '-35% 0px -55% 0px' });
   sections.forEach(section => observer.observe(section));
 }
 
@@ -122,9 +124,9 @@ if ('IntersectionObserver' in window) {
   revealTargets.forEach(element => revealObserver.observe(element));
 })();
 
-// Progressive enhancement: the original design and controls still work if this fails to load.
+// Incremental premium/media layer; existing page structure and features remain intact.
 (() => {
-  ['premium.css', 'experience.css'].forEach(href => {
+  ['premium.css', 'experience.css', 'asset-integration.css'].forEach(href => {
     const style = document.createElement('link');
     style.rel = 'stylesheet';
     style.href = href;
@@ -157,20 +159,20 @@ if ('IntersectionObserver' in window) {
     card.addEventListener('blur', reset, true);
   });
 
-  // Existing project artwork is presented as-is in a keyboard-accessible showcase.
+  // Existing portfolio artwork opens unchanged in the accessible project showcase.
   const projectDialog = document.createElement('dialog');
   projectDialog.className = 'project-showcase';
   projectDialog.setAttribute('aria-label', 'Project presentation');
   projectDialog.innerHTML = '<div class="showcase-shell"><header class="showcase-head"><div><p class="showcase-kicker"></p><h2 class="showcase-title"></h2></div><button class="showcase-close" type="button" aria-label="Close project presentation">×</button></header><div class="showcase-stage"><div class="showcase-object"><div class="showcase-art"></div></div></div><div class="showcase-copy"><p class="showcase-description"></p><p class="showcase-hint">Move or drag to explore</p></div></div>';
   document.body.appendChild(projectDialog);
   const projectClose = projectDialog.querySelector('.showcase-close');
-  const stage = projectDialog.querySelector('.showcase-stage');
-  const object = projectDialog.querySelector('.showcase-object');
+  const projectStage = projectDialog.querySelector('.showcase-stage');
+  const projectObject = projectDialog.querySelector('.showcase-object');
   let projectReturnFocus = null;
   let dragPointer = null;
-  const setStageAngle = (x, y) => {
-    object.style.setProperty('--stage-x', `${clamp(x, -10, 10).toFixed(2)}deg`);
-    object.style.setProperty('--stage-y', `${clamp(y, -14, 14).toFixed(2)}deg`);
+  const setProjectAngle = (x, y) => {
+    projectObject.style.setProperty('--stage-x', `${clamp(x, -10, 10).toFixed(2)}deg`);
+    projectObject.style.setProperty('--stage-y', `${clamp(y, -14, 14).toFixed(2)}deg`);
   };
   const openProject = card => {
     const artwork = card.querySelector('.project-art');
@@ -183,7 +185,7 @@ if ('IntersectionObserver' in window) {
     host.replaceChildren(artwork.cloneNode(true));
     host.firstElementChild?.classList.remove('project-art');
     projectReturnFocus = card;
-    setStageAngle(2, -4);
+    setProjectAngle(2, -4);
     if (!projectDialog.open) projectDialog.showModal();
     projectClose.focus();
   };
@@ -204,41 +206,45 @@ if ('IntersectionObserver' in window) {
   });
   projectClose.addEventListener('click', () => projectDialog.close());
   projectDialog.addEventListener('click', event => { if (event.target === projectDialog) projectDialog.close(); });
-  projectDialog.addEventListener('close', () => { setStageAngle(0, 0); projectReturnFocus?.focus(); });
-  stage.addEventListener('pointerdown', event => {
+  projectDialog.addEventListener('close', () => { setProjectAngle(0, 0); projectReturnFocus?.focus(); });
+  projectStage.addEventListener('pointerdown', event => {
     if (event.pointerType === 'mouse' && !finePointer.matches) return;
     dragPointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
-    stage.setPointerCapture?.(event.pointerId);
+    projectStage.setPointerCapture?.(event.pointerId);
   });
-  stage.addEventListener('pointermove', event => {
+  projectStage.addEventListener('pointermove', event => {
     if (!projectDialog.open || reducedMotion.matches) return;
-    const rect = stage.getBoundingClientRect();
+    const rect = projectStage.getBoundingClientRect();
     if (dragPointer && dragPointer.id === event.pointerId) {
       const dx = event.clientX - dragPointer.x;
       const dy = event.clientY - dragPointer.y;
       dragPointer.x = event.clientX; dragPointer.y = event.clientY;
-      setStageAngle((parseFloat(object.style.getPropertyValue('--stage-x')) || 0) - dy * .12, (parseFloat(object.style.getPropertyValue('--stage-y')) || 0) + dx * .12);
+      setProjectAngle((parseFloat(projectObject.style.getPropertyValue('--stage-x')) || 0) - dy * .12, (parseFloat(projectObject.style.getPropertyValue('--stage-y')) || 0) + dx * .12);
     } else if (event.pointerType === 'mouse' && rect.width && rect.height) {
-      setStageAngle(-((event.clientY - rect.top) / rect.height - .5) * 9, ((event.clientX - rect.left) / rect.width - .5) * 12);
+      setProjectAngle(-((event.clientY - rect.top) / rect.height - .5) * 9, ((event.clientX - rect.left) / rect.width - .5) * 12);
     }
   }, { passive: true });
-  ['pointerup', 'pointercancel'].forEach(type => stage.addEventListener(type, () => { dragPointer = null; }));
-  stage.addEventListener('pointerleave', () => { if (!dragPointer) setStageAngle(0, 0); });
+  ['pointerup', 'pointercancel'].forEach(type => projectStage.addEventListener(type, () => { dragPointer = null; }));
+  projectStage.addEventListener('pointerleave', () => { if (!dragPointer) setProjectAngle(0, 0); });
 
-  // Service previews are original CSS process illustrations, not invented client work.
-  const serviceCards = [...document.querySelectorAll('.service-card')].slice(0, 3);
+  // Official supplied media mapped explicitly by service. Preview images are deferred/lazy.
   const serviceCopy = [
-    { title: 'Graphics Design', kind: 'graphics', intro: 'A visual identity takes shape through considered composition, type and detail.', request: 'Graphics Design' },
-    { title: 'Website Design', kind: 'website', intro: 'From responsive structure to polished interface, each screen is designed with purpose.', request: 'Website Design' },
-    { title: 'Video Editing', kind: 'video', intro: 'A story finds its rhythm through intentional cuts, transitions and finishing.', request: 'Video Editing' }
+    { title: 'Graphics Design', kind: 'graphics', intro: 'A visual identity takes shape through considered composition, type and detail.', request: 'Graphics Design', asset: 'assets/file_00000000beb482108acc9b55f44554fc.png', alt: 'FEMITECH EMPIRE graphics design service visual' },
+    { title: 'Website Design', kind: 'website', intro: 'From responsive structure to polished interface, each screen is designed with purpose.', request: 'Website Design', asset: 'assets/file_000000006b1081f4a46fa7fea53053f5.png', alt: 'FEMITECH EMPIRE website design service visual' },
+    { title: 'Video Editing', kind: 'video', intro: 'A story finds its rhythm through intentional cuts, transitions and finishing.', request: 'Video Editing', asset: 'assets/file_00000000fb948210b3ed19dbfc56b421.png', alt: 'FEMITECH EMPIRE video editing service visual' }
   ];
-  const makeVisual = kind => {
+  const makeServiceVisual = (item, isModal = false) => {
     const visual = document.createElement('div');
-    visual.className = `service-visual service-visual-${kind}`;
+    visual.className = `service-visual service-visual-${item.kind}${isModal ? ' service-visual-modal' : ''}`;
     visual.setAttribute('aria-hidden', 'true');
-    if (kind === 'graphics') visual.innerHTML = '<span class="visual-index">FE / DESIGN STUDIO</span><div class="design-sheet"><i class="sheet-orbit"></i><small>FORM • TYPE • IMAGE</small><b>IDEAS<br>INTO<br>FORM.</b><span>CREATIVE DIRECTION / 01</span></div><div class="design-note">LAYOUT<br><b>01—03</b></div><i class="visual-rule"></i>';
-    if (kind === 'website') visual.innerHTML = '<span class="visual-index">DIGITAL / RESPONSIVE</span><div class="interface-window"><div class="interface-bar"><i></i><i></i><i></i><span>YOUR DIGITAL SPACE</span></div><div class="interface-layout"><div class="interface-copy"><small>DESIGNED FOR PEOPLE</small><b>Make room<br>for what’s next.</b><i></i></div><div class="interface-block"></div><div class="interface-line"></div></div></div><div class="device-frame"><i></i><b></b><span></span></div>';
-    if (kind === 'video') visual.innerHTML = '<span class="visual-index">POST / PRODUCTION</span><div class="film-preview"><div class="film-light"></div><small>SEQUENCE 01 / PREVIEW</small><b>STORIES<br>IN MOTION.</b><span class="film-play">▶</span></div><div class="timeline"><i></i><i></i><i></i><i></i><span></span></div><div class="timeline-time">00:18:24&nbsp;&nbsp; • &nbsp;&nbsp;01:02:10</div>';
+    const image = document.createElement('img');
+    image.className = 'service-visual-image';
+    image.src = item.asset;
+    image.alt = '';
+    image.loading = isModal ? 'eager' : 'lazy';
+    image.decoding = 'async';
+    if (isModal) image.fetchPriority = 'high';
+    visual.append(image);
     return visual;
   };
   const serviceDialog = document.createElement('dialog');
@@ -249,7 +255,6 @@ if ('IntersectionObserver' in window) {
   const cinemaClose = serviceDialog.querySelector('.cinema-close');
   const cinemaMedia = serviceDialog.querySelector('.cinema-media');
   let serviceReturnFocus = null;
-  let activeServiceVideo = null;
   const openService = (card, index) => {
     const item = serviceCopy[index];
     if (!item) return;
@@ -257,42 +262,21 @@ if ('IntersectionObserver' in window) {
     serviceDialog.querySelector('#service-cinema-title').textContent = item.title;
     serviceDialog.querySelector('.cinema-description').textContent = item.intro;
     const request = serviceDialog.querySelector('.cinema-request');
-    request.href = '#contact';
     request.dataset.service = item.request;
-    request.textContent = 'REQUEST THIS SERVICE ↗';
-    cinemaMedia.replaceChildren();
-    const videoSrc = card.dataset.serviceVideo || '';
-    const posterSrc = card.dataset.servicePoster || '';
-    const imageSequence = (card.dataset.serviceSequence || '').split(',').map(path => path.trim()).filter(Boolean);
-    if (videoSrc) {
-      const video = document.createElement('video');
-      video.className = 'cinema-video';
-      video.controls = true; video.playsInline = true; video.preload = 'metadata';
-      if (posterSrc) video.poster = posterSrc;
-      const source = document.createElement('source');
-      source.src = videoSrc; source.type = /\.webm(?:$|\?)/i.test(videoSrc) ? 'video/webm' : 'video/mp4';
-      video.append(source); cinemaMedia.append(video); activeServiceVideo = video;
-      video.play().catch(() => { /* Keep native controls available if autoplay is blocked. */ });
-    } else if (imageSequence.length) {
-      const sequence = document.createElement('div'); sequence.className = 'service-sequence';
-      imageSequence.forEach((src, position) => {
-        const image = document.createElement('img'); image.src = src; image.alt = `${item.title} process frame ${position + 1}`; image.loading = 'lazy';
-        sequence.append(image);
-      });
-      cinemaMedia.append(sequence);
-    } else {
-      cinemaMedia.append(makeVisual(item.kind));
-    }
+    cinemaMedia.replaceChildren(makeServiceVisual(item, true));
     if (!serviceDialog.open) serviceDialog.showModal();
     cinemaClose.focus();
   };
+  const serviceCards = [...document.querySelectorAll('.service-card')].slice(0, 3);
   serviceCards.forEach((card, index) => {
     const item = serviceCopy[index];
     if (!item) return;
     const anchor = card.querySelector('a[data-service]');
-    if (!card.querySelector('.service-visual')) card.insertBefore(makeVisual(item.kind), anchor || card.querySelector('h3'));
+    if (!card.querySelector('.service-visual')) card.insertBefore(makeServiceVisual(item), anchor || card.querySelector('h3'));
     const trigger = document.createElement('button');
-    trigger.type = 'button'; trigger.className = 'service-preview-trigger';
+    trigger.type = 'button';
+    trigger.className = 'service-preview-trigger';
+    trigger.setAttribute('aria-haspopup', 'dialog');
     trigger.setAttribute('aria-label', `Explore ${item.title} visual presentation`);
     trigger.innerHTML = 'EXPLORE THE PROCESS <span aria-hidden="true">↗</span>';
     if (anchor) anchor.insertAdjacentElement('beforebegin', trigger); else card.append(trigger);
@@ -304,62 +288,86 @@ if ('IntersectionObserver' in window) {
   });
   cinemaClose.addEventListener('click', () => serviceDialog.close());
   serviceDialog.addEventListener('click', event => { if (event.target === serviceDialog) serviceDialog.close(); });
-  serviceDialog.addEventListener('close', () => {
-    activeServiceVideo?.pause(); activeServiceVideo = null;
-    serviceReturnFocus?.focus();
-  });
+  serviceDialog.addEventListener('close', () => { cinemaMedia.replaceChildren(); serviceReturnFocus?.focus(); });
   serviceDialog.querySelector('.cinema-request').addEventListener('click', event => {
     const select = document.querySelector('select[name="service"]');
     if (select) select.value = event.currentTarget.dataset.service;
     serviceDialog.close();
   });
 
-  // Customer login is a branded front-end entry panel; connect a real auth endpoint before accepting credentials.
-  const loginAudioSource = ''; // Add a small, licensed ambience MP3/WebM here when available.
+  // Customer login retains its existing form; load the supplied cinematic only after activation.
+  const loginCinematicAsset = 'assets/file_00000000e76c81f4a186e5eedbb97512%20(2).gif';
   const loginLink = document.createElement('a');
-  loginLink.href = '#customer-login'; loginLink.className = 'customer-login-link'; loginLink.textContent = 'CUSTOMER LOGIN';
+  loginLink.href = '#customer-login';
+  loginLink.className = 'customer-login-link';
+  loginLink.textContent = 'CUSTOMER LOGIN';
   loginLink.setAttribute('aria-haspopup', 'dialog');
   const navCta = nav?.querySelector('.nav-cta');
   if (nav && navCta) nav.insertBefore(loginLink, navCta);
   const loginDialog = document.createElement('dialog');
   loginDialog.className = 'customer-login';
   loginDialog.setAttribute('aria-labelledby', 'login-title');
-  loginDialog.innerHTML = '<div class="login-shell"><button class="login-close" type="button" aria-label="Close customer login">×</button><div class="login-atmosphere" aria-hidden="true"><span class="login-orbit"></span><span class="login-grid"></span></div><div class="login-brand"><img src="assets/femitech-empire-logo.png" alt="FEMITECH EMPIRE"><span>PRIVATE CLIENT WORKSPACE</span></div><div class="login-welcome"><p class="cinema-kicker">A SPACE FOR WHAT WE BUILD TOGETHER</p><h2 id="login-title">WELCOME<br><span>BACK.</span></h2><p>Your creative workspace, ready when you are.</p></div><form class="login-form"><label for="workspace-email">EMAIL ADDRESS</label><input id="workspace-email" name="email" type="email" autocomplete="username" placeholder="you@example.com" required><label for="workspace-password">PASSWORD</label><input id="workspace-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button class="btn btn-primary" type="submit">ENTER WORKSPACE <span aria-hidden="true">↗</span></button><p class="login-status" role="status" aria-live="polite"></p><p class="login-help">Need access? <a href="mailto:femitech924@gmail.com?subject=Customer%20workspace%20access">Contact our team</a></p></form><button class="login-sound" type="button" aria-label="Sound unavailable until an ambience track is added" disabled> SOUND OFF <span>•</span></button><audio class="login-audio" loop preload="none" aria-hidden="true"></audio></div>';
+  loginDialog.innerHTML = '<div class="login-shell"><button class="login-close" type="button" aria-label="Close customer login">×</button><div class="login-atmosphere" aria-hidden="true"><span class="login-orbit"></span><span class="login-grid"></span></div><div class="login-cinematic" aria-hidden="true"><div class="login-cinematic-art"></div><div class="login-cinematic-brand"><img src="assets/femitech-empire-logo.png" alt=""><span>FEMITECH EMPIRE</span></div><p>ENTER YOUR CREATIVE WORKSPACE</p></div><div class="login-brand"><img src="assets/femitech-empire-logo.png" alt="FEMITECH EMPIRE"><span>PRIVATE CLIENT WORKSPACE</span></div><div class="login-welcome"><p class="cinema-kicker">A SPACE FOR WHAT WE BUILD TOGETHER</p><h2 id="login-title">WELCOME<br><span>BACK.</span></h2><p>Your creative workspace, ready when you are.</p></div><form class="login-form"><label for="workspace-email">EMAIL ADDRESS</label><input id="workspace-email" name="email" type="email" autocomplete="username" placeholder="you@example.com" required><label for="workspace-password">PASSWORD</label><input id="workspace-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button class="btn btn-primary" type="submit">ENTER WORKSPACE <span aria-hidden="true">↗</span></button><p class="login-status" role="status" aria-live="polite"></p><p class="login-help">Need access? <a href="mailto:femitech924@gmail.com?subject=Customer%20workspace%20access">Contact our team</a></p></form><button class="login-sound" type="button" aria-label="Sound unavailable until an ambience track is added" disabled>SOUND OFF <span aria-hidden="true">•</span></button><audio class="login-audio" loop preload="none" aria-hidden="true"></audio></div>';
   document.body.appendChild(loginDialog);
   const loginClose = loginDialog.querySelector('.login-close');
+  const loginShell = loginDialog.querySelector('.login-shell');
+  const cinematicLayer = loginDialog.querySelector('.login-cinematic');
+  const cinematicArt = loginDialog.querySelector('.login-cinematic-art');
   const loginSound = loginDialog.querySelector('.login-sound');
   const loginAudio = loginDialog.querySelector('.login-audio');
   let loginReturnFocus = null;
+  let loginRevealTimer = 0;
+  const loginAudioSource = ''; // No audio asset is present in the supplied media set.
   if (loginAudioSource) {
     loginAudio.src = loginAudioSource;
     loginSound.disabled = false;
-    loginSound.setAttribute('aria-label', 'Turn login ambience on');
-    try { loginSound.dataset.enabled = sessionStorage.getItem('femitech-login-sound') === 'on' ? 'true' : 'false'; } catch { loginSound.dataset.enabled = 'false'; }
   }
-  const setLoginSound = async enabled => {
+  loginSound.addEventListener('click', async () => {
     if (!loginAudioSource) return;
+    const enabled = loginSound.dataset.enabled !== 'true';
     loginSound.dataset.enabled = String(enabled);
     loginAudio.volume = 0.12;
     loginSound.setAttribute('aria-label', enabled ? 'Mute login ambience' : 'Enable login ambience');
-    loginSound.innerHTML = `${enabled ? 'SOUND ON' : 'SOUND OFF'} <span aria-hidden="true">•</span>`;
-    try { sessionStorage.setItem('femitech-login-sound', enabled ? 'on' : 'off'); } catch { /* Session preference is optional. */ }
-    if (enabled) { try { await loginAudio.play(); } catch { loginSound.dataset.enabled = 'false'; } }
-    else loginAudio.pause();
-  };
-  loginSound.addEventListener('click', () => setLoginSound(loginSound.dataset.enabled !== 'true'));
+    loginSound.textContent = enabled ? 'SOUND ON' : 'SOUND OFF';
+    try { sessionStorage.setItem('femitech-login-sound', enabled ? 'on' : 'off'); } catch { /* Optional session preference. */ }
+    if (enabled) { try { await loginAudio.play(); } catch { loginSound.dataset.enabled = 'false'; } } else loginAudio.pause();
+  });
   loginLink.addEventListener('click', event => {
-    event.preventDefault(); loginReturnFocus = loginLink;
+    event.preventDefault();
+    loginReturnFocus = loginLink;
+    loginShell.classList.remove('is-entered', 'cinematic-done');
+    cinematicArt.replaceChildren();
+    if (!reducedMotion.matches) {
+      const cinematic = document.createElement('img');
+      cinematic.src = loginCinematicAsset;
+      cinematic.alt = '';
+      cinematic.decoding = 'async';
+      cinematicArt.append(cinematic);
+      loginShell.classList.add('cinematic-playing');
+    } else {
+      loginShell.classList.add('cinematic-done', 'is-entered');
+    }
     loginDialog.showModal();
-    loginDialog.querySelector('.login-shell').classList.remove('is-entered');
-    requestAnimationFrame(() => requestAnimationFrame(() => loginDialog.querySelector('.login-shell').classList.add('is-entered')));
-    if (loginAudioSource && loginSound.dataset.enabled === 'true') setLoginSound(true);
-    window.setTimeout(() => loginDialog.querySelector('#workspace-email').focus(), reducedMotion.matches ? 0 : 650);
+    if (!reducedMotion.matches) {
+      requestAnimationFrame(() => loginShell.classList.add('cinematic-visible'));
+      loginRevealTimer = window.setTimeout(() => {
+        loginShell.classList.add('cinematic-done', 'is-entered');
+        loginShell.classList.remove('cinematic-playing');
+        cinematicArt.replaceChildren();
+        loginDialog.querySelector('#workspace-email').focus();
+      }, 2800);
+    } else {
+      window.setTimeout(() => loginDialog.querySelector('#workspace-email').focus(), 0);
+    }
   });
   loginClose.addEventListener('click', () => loginDialog.close());
   loginDialog.addEventListener('click', event => { if (event.target === loginDialog) loginDialog.close(); });
   loginDialog.addEventListener('close', () => {
-    loginAudio.pause(); loginAudio.currentTime = 0;
-    loginDialog.querySelector('.login-shell').classList.remove('is-entered');
+    window.clearTimeout(loginRevealTimer);
+    loginAudio.pause();
+    loginAudio.currentTime = 0;
+    cinematicArt.replaceChildren();
+    loginShell.classList.remove('cinematic-playing', 'cinematic-visible', 'cinematic-done', 'is-entered');
     loginReturnFocus?.focus();
   });
   loginDialog.querySelector('.login-form').addEventListener('submit', event => {
