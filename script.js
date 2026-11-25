@@ -112,3 +112,74 @@ if ('IntersectionObserver' in window) {
   }, { threshold: 0.12, rootMargin: '0px 0px -35px 0px' });
   revealTargets.forEach(element => revealObserver.observe(element));
 })();
+
+// Build the Selected Works gallery inside the existing projects section.
+(() => {
+  const projectSection = document.querySelector('#projects');
+  if (!projectSection) return;
+
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = 'selected-works.css';
+  document.head.append(stylesheet);
+
+  const items = [
+    { title: 'Graphics Design', category: 'Graphics Design', description: 'Distinctive visual identities and thoughtful graphic work, built to make every brand memorable.', image: 'assets/file_0000000029b48210ac82bbed2769c0e3.png' },
+    { title: 'Website Design', category: 'Website Design', description: 'Modern digital experiences that bring ideas online with clarity, character and purpose.', image: 'assets/file_00000000733c81f4b21dc0990f3012a0.png' },
+    { title: 'Video Editing', category: 'Video Editing', description: 'Polished visual stories shaped to hold attention and bring a message to life.', image: 'assets/file_00000000b5e481f4b728194098b1818d.png' },
+    { title: 'AI Content Creation', category: 'AI Content Creation', description: 'Imaginative AI-assisted content exploring new creative possibilities and visual directions.', image: 'assets/file_00000000e6d48210acc3e4a6afa0f53e.png' },
+    { title: 'Digital Ads', category: 'Digital Ads', description: 'Campaign-ready advertising creative designed to make the message stand out.', image: 'assets/file_00000000f7c081f4990cbb176b6b0177.png' },
+    { title: 'Book Design', category: 'Book Design', description: 'Carefully composed covers and book visuals that invite readers into the story.', image: 'assets/file_00000000fb4481f4891e6a6072ab4ece.png' }
+  ];
+  const overviewImage = 'assets/file_00000000150081f49564f2117a2cad8d.png';
+  const gallery = document.createElement('div');
+  gallery.className = 'selected-works';
+  gallery.innerHTML = `
+    <div class="selected-overview">
+      <button class="selected-image-button selected-overview-image" type="button" data-preview-src="${overviewImage}" data-preview-alt="FEMITECH EMPIRE Selected Works overview">
+        <img src="${overviewImage}" alt="FEMITECH EMPIRE creative portfolio overview" loading="lazy" decoding="async">
+        <span class="selected-image-hint">VIEW PROJECT ↗</span>
+      </button>
+      <div class="selected-overview-copy"><span class="selected-eyebrow">FEMITECH EMPIRE / CREATIVE PORTFOLIO</span><h3>Ideas, made<br><span>visible.</span></h3><p>A closer look at the creative work we do across design, digital experiences, motion and publishing.</p><span class="selected-index">SELECTED WORKS <b> / 2026</b></span></div>
+    </div>
+    <div class="selected-heading"><div><span class="selected-eyebrow">A RANGE OF CREATIVE DISCIPLINES</span><h3>Explore our work.</h3></div><p>Six ways we help ideas take shape and make an impact.</p></div>
+    <div class="selected-filters" role="group" aria-label="Filter selected works"><button class="selected-filter is-active" type="button" data-work-filter="All">ALL WORK</button>${items.map(item => `<button class="selected-filter" type="button" data-work-filter="${item.category}">${item.category.toUpperCase()}</button>`).join('')}</div>
+    <div class="selected-grid">${items.map((item, index) => `<article class="selected-work-card" data-work-category="${item.category}" style="--work-delay:${index * 70}ms"><button class="selected-image-button selected-card-image" type="button" data-preview-src="${item.image}" data-preview-alt="${item.title} portfolio preview"><img src="${item.image}" alt="${item.title} portfolio work" loading="lazy" decoding="async"><span class="selected-image-hint">VIEW PROJECT ↗</span><span class="selected-card-number">0${index + 1}</span></button><div class="selected-card-copy"><span class="selected-card-category">${item.category}</span><h4>${item.title}</h4><p>${item.description}</p></div></article>`).join('')}</div>
+    <dialog class="selected-preview" aria-label="Portfolio image preview"><button class="selected-preview-close" type="button" aria-label="Close image preview">×</button><img alt="" src=""><p></p></dialog>`;
+
+  const sectionTop = projectSection.querySelector('.section-top');
+  if (sectionTop) {
+    sectionTop.innerHTML = '<div><span class="selected-eyebrow">03 / SELECTED WORK</span><h2>MADE TO MAKE<br><span>AN IMPACT.</span></h2></div><p>A considered collection of creative work across six disciplines. Select an image for a closer look.</p>';
+  }
+  const legacyFilters = projectSection.querySelector('.filters');
+  projectSection.insertBefore(gallery, legacyFilters || projectSection.querySelector('.live-project'));
+
+  const filterControls = [...gallery.querySelectorAll('[data-work-filter]')];
+  const cards = [...gallery.querySelectorAll('.selected-work-card')];
+  filterControls.forEach(control => control.addEventListener('click', () => {
+    filterControls.forEach(button => button.classList.toggle('is-active', button === control));
+    cards.forEach(card => { card.hidden = control.dataset.workFilter !== 'All' && card.dataset.workCategory !== control.dataset.workFilter; });
+  }));
+
+  const preview = gallery.querySelector('.selected-preview');
+  const previewImage = preview.querySelector('img');
+  const previewCaption = preview.querySelector('p');
+  gallery.querySelectorAll('[data-preview-src]').forEach(button => button.addEventListener('click', () => {
+    previewImage.src = button.dataset.previewSrc;
+    previewImage.alt = button.dataset.previewAlt;
+    previewCaption.textContent = button.dataset.previewAlt;
+    preview.showModal();
+  }));
+  preview.querySelector('.selected-preview-close').addEventListener('click', () => preview.close());
+  preview.addEventListener('click', event => { if (event.target === preview) preview.close(); });
+  preview.addEventListener('close', () => { previewImage.removeAttribute('src'); });
+
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver.unobserve(entry.target); }
+    }), { threshold: 0.12 });
+    gallery.querySelectorAll('.selected-overview, .selected-heading, .selected-work-card').forEach(element => revealObserver.observe(element));
+  } else {
+    gallery.querySelectorAll('.selected-overview, .selected-heading, .selected-work-card').forEach(element => element.classList.add('is-visible'));
+  }
+})();
