@@ -93,7 +93,7 @@ if ('IntersectionObserver' in window) {
   sections.forEach(section => observer.observe(section));
 }
 
-// Progressive scroll reveals; content stays visible when observers are unavailable.
+// Progressive scroll reveals; content stays visible when observers are unavailable or delayed.
 (() => {
   const revealTargets = document.querySelectorAll('.intro-grid, .pillars article, .service-card, .section-top, .project-card, .live-project, .book-card, .creative-copy, .creative-art, .process-grid article, .founder-copy, .contact-copy, .contact-form');
   if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -111,6 +111,8 @@ if ('IntersectionObserver' in window) {
     });
   }, { threshold: 0.12, rootMargin: '0px 0px -35px 0px' });
   revealTargets.forEach(element => revealObserver.observe(element));
+  // Avoid leaving content hidden if an observer is throttled or fails to deliver.
+  window.setTimeout(() => revealTargets.forEach(element => element.classList.add('is-visible')), 2400);
 })();
 
 // Build the Selected Works gallery inside the existing projects section.
@@ -122,6 +124,33 @@ if ('IntersectionObserver' in window) {
   stylesheet.rel = 'stylesheet';
   stylesheet.href = 'selected-works.css';
   document.head.append(stylesheet);
+
+  // Show the verified portfolio samples alongside their matching service cards.
+  // Keep the existing service icon, copy, links and layout intact.
+  const serviceImages = [
+    ['Graphics Design', 'assets/file_0000000029b48210ac82bbed2769c0e3.png'],
+    ['Website Design', 'assets/file_00000000733c81f4b21dc0990f3012a0.png'],
+    ['Video Editing', 'assets/file_00000000b5e481f4b728194098b1818d.png'],
+    ['AI Content Creation', 'assets/file_00000000e6d48210acc3e4a6afa0f53e.png'],
+    ['Digital Ads', 'assets/file_00000000f7c081f4990cbb176b6b0177.png'],
+    ['Jingles & Promo Videos', 'assets/file_00000000b5e481f4b728194098b1818d.png'],
+    ['AI Chatbot & Chatbox Development', 'assets/file_00000000733c81f4b21dc0990f3012a0.png']
+  ];
+  const serviceImageStyles = document.createElement('style');
+  serviceImageStyles.textContent = '.service-card .service-work-image{display:block;width:100%;height:104px;margin:12px 0 16px;object-fit:cover;object-position:center;border:1px solid rgba(126,164,236,.28);background:#0b1730;transition:transform .45s cubic-bezier(.2,.8,.2,1),filter .35s}.service-card:hover .service-work-image{transform:scale(1.025);filter:brightness(1.06)}@media(max-width:760px){.service-card .service-work-image{height:clamp(100px,32vw,160px)}}@media(prefers-reduced-motion:reduce){.service-card .service-work-image{transition:none}}';
+  document.head.append(serviceImageStyles);
+  const serviceCards = [...document.querySelectorAll('.service-grid .service-card')];
+  serviceImages.forEach(([serviceName, imagePath]) => {
+    const card = serviceCards.find(item => item.querySelector('h3')?.textContent.trim() === serviceName);
+    if (!card || card.querySelector('.service-work-image')) return;
+    const image = document.createElement('img');
+    image.className = 'service-work-image';
+    image.src = imagePath;
+    image.alt = `${serviceName} portfolio example`;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    card.querySelector('.service-icon')?.after(image);
+  });
 
   const items = [
     { title: 'Graphics Design', category: 'Graphics Design', description: 'Distinctive visual identities and thoughtful graphic work, built to make every brand memorable.', image: 'assets/file_0000000029b48210ac82bbed2769c0e3.png' },
@@ -174,12 +203,14 @@ if ('IntersectionObserver' in window) {
   preview.addEventListener('click', event => { if (event.target === preview) preview.close(); });
   preview.addEventListener('close', () => { previewImage.removeAttribute('src'); });
 
+  const galleryRevealTargets = gallery.querySelectorAll('.selected-overview, .selected-heading, .selected-work-card');
   if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const revealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
       if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver.unobserve(entry.target); }
     }), { threshold: 0.12 });
-    gallery.querySelectorAll('.selected-overview, .selected-heading, .selected-work-card').forEach(element => revealObserver.observe(element));
+    galleryRevealTargets.forEach(element => revealObserver.observe(element));
+    window.setTimeout(() => galleryRevealTargets.forEach(element => element.classList.add('is-visible')), 3000);
   } else {
-    gallery.querySelectorAll('.selected-overview, .selected-heading, .selected-work-card').forEach(element => element.classList.add('is-visible'));
+    galleryRevealTargets.forEach(element => element.classList.add('is-visible'));
   }
 })();
